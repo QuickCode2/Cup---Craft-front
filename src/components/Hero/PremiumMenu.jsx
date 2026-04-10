@@ -57,47 +57,63 @@ const PremiumMenu = () => {
 
   const totalPrice = selected ? selected.price * form.quantity : 0;
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const [loading, setLoading] = useState(false); // ✅ add this
 
-   if (!selected) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+  if (!selected) {
     toast.error("Please select a coffee ☕");
     return;
   }
-try {
-  const response = await fetch("http://localhost:5000/api/orders", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      customerName: form.name,       // 👤 backend expects this
-      email: form.email,             // optional, if schema allows
-      coffeeName: selected.name,     // ☕ coffee ka naam
-      coffeeType: "Premium",         // 👑 premium type fixed
-      qty: Number(form.quantity),    // 🔢 backend expects qty
-      total: totalPrice,             // 💰 total
-      address: form.address,         // 📍 address
-    }),
-  });
 
-  if (response.ok) {
-    toast.success("👑 Premium Order Successfully!");
-    // reset form
-    setForm({
-      name: "",
-      email: "",
-      quantity: 1,
-      address: "",
+  setLoading(true);
+  const toastId = toast.loading("Sending message... ⏳");
+
+  try {
+    const response = await fetch("https://cup-craft-1back.vercel.app/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerName: form.name,
+        email: form.email,
+        coffeeName: selected.name,
+        coffeeType: "Premium",
+        qty: Number(form.quantity),
+        total: totalPrice,
+        address: form.address,
+      }),
     });
-    setSelected(null);
-  } else {
-    toast.error("Order Error - Please try again.");
+
+    if (response.ok) {
+      toast.success("👑 Premium Order Successfully!", {
+        id: toastId,
+      });
+
+      setForm({
+        name: "",
+        email: "",
+        quantity: 1,
+        address: "",
+      });
+
+      setSelected(null);
+    } else {
+      toast.error("Order Error - Please try again.", {
+        id: toastId,
+      });
+    }
+  } catch (error) {
+    toast.error("Server error", {
+      id: toastId,
+    });
+  } finally {
+    setLoading(false); 
   }
-} catch (error) {
-  toast.error("Server error");
-}
 };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-tl from-[#1a120b] via-[#3d2517] to-black text-[#f5f5dc] px-6 py-16">
@@ -208,9 +224,10 @@ try {
           {/* Button */}
           <button
             type="submit"
+            disabled={loading}
             className="w-full bg-[#6f1d1b] border-[#D4AF37] border-x-2 text-white py-3 rounded-lg font-semibold hover:scale-105 transition"
           >
-            Confirm Premium Order
+          {loading ? "Sending Your Order..." : "Confirm Premium Order"}
           </button>
         </form>
       </div>

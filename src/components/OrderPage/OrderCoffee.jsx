@@ -65,7 +65,7 @@ const coffeeMenu = [
   { name: "Mocha", type: "Mocha", price: 165 },
   { name: "White Mocha", type: "Mocha", price: 305 },
 
-  // Cold Brew Variants
+  // Cold Brew 
   { name: "Cold Brew", type: "Cold Brew", price: 150 },
   { name: "Premium Cold Brew", type: "Cold Brew", price: 250 },
 
@@ -82,18 +82,18 @@ const coffeeMenu = [
   { name: "Doppio", type: "Doppio", price: 230 },
   { name: "Iced Coffee", type: "Iced Coffee", price: 200 },
 
-  // Hot Coffee Collection (added)
+  // Hot Coffee 
   { name: "Espresso", type: "Hot Coffee", price: 150 },
   { name: "Americano", type: "Hot Coffee", price: 180 },
   { name: "Cappuccino", type: "Hot Coffee", price: 200 },
   { name: "Latte", type: "Hot Coffee", price: 220 },
 
-  // Cold Coffee Collection (added)
+  // Cold Coffee 
   { name: "Cold Brew", type: "Cold Coffee", price: 250 },
   { name: "Iced Latte", type: "Cold Coffee", price: 270 },
   { name: "Mocha Shake", type: "Cold Coffee", price: 300 },
 
-  // Barista Special Creations (added)
+  // Barista Special
   { name: "Signature Espresso Blend", type: "Barista Special", price: 350 },
   { name: "Caramel Cream Delight", type: "Barista Special", price: 400 },
   { name: "Chocolate Velvet Coffee", type: "Barista Special", price: 450 },
@@ -117,6 +117,8 @@ const OrderCoffee = () => {
     address: "",
   });
 
+  const [loading, setLoading] = useState(false); 
+
 
   const handleDropdownChange = (e) => {
     const item = coffeeMenu.find(c => c.name === e.target.value);
@@ -129,49 +131,63 @@ const OrderCoffee = () => {
 
   const totalPrice = selected ? selected.price * form.quantity : 0;
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
   if (!selected) {
     toast.error("Please select a coffee ☕");
     return;
   }
 
+  setLoading(true);
+  const toastId = toast.loading("Sending message... ⏳");
+
   try {
-  const response = await fetch("http://localhost:5000/api/orders", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      customerName: form.name,    
-      email: form.email,           
-      coffeeName: selected.name,    
-      coffeeType: "Normal",          
-      qty: Number(form.quantity),    
-      total: totalPrice,             
-      address: form.address,         
-    }),
-  });
-
-  if (response.ok) {
-    toast.success("☕ Your Order successfully!");
-
-    
-    setForm({
-      name: "",
-      email: "",
-      quantity: 1,
-      address: "",
+    const response = await fetch("https://cup-craft-1back.vercel.app/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerName: form.name,
+        email: form.email,
+        coffeeName: selected.name,
+        coffeeType: "Normal",
+        qty: Number(form.quantity),
+        total: totalPrice,
+        address: form.address,
+      }),
     });
-    setSelected(null);
-  } else {
-    toast.error("Order failed! Try again.");
+
+
+    if (response.ok) {
+      toast.success("☕ Your Order successful!", {
+        id: toastId,
+      });
+
+      setForm({
+        name: "",
+        email: "",
+        quantity: 1,
+        address: "",
+      });
+
+      setSelected(null);
+    } else {
+      toast.error("Order Error - failed! Try again.", {
+        id: toastId,
+      });
+    }
+  } catch (error) {
+    toast.error("Server error", {
+      id: toastId,
+    });
+  } finally {
+    setLoading(false); 
   }
-} catch (error) {
-  toast.error("Server error");
-}
-};  
+};
+
   return (
     <div className="min-h-screen bg-gradient-to-tl from-[#1a120b] via-[#3d2517] to-black text-white px-6 py-16">
       <Toaster position="top-center" reverseOrder={false} />
@@ -194,7 +210,7 @@ const handleSubmit = async (e) => {
         </p>
       </div>
 
-      {/* CARDS (Main Types Only) */}
+      {/* CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto mb-24">
         {[...new Set(coffeeMenu.map(item => item.type))].map((type, i) => (
           <motion.div
@@ -279,10 +295,14 @@ const handleSubmit = async (e) => {
           />
 
           {/* BUTTON */}
-          <button className="w-full bg-[#00000070] border-x-2 text-white py-3 rounded-lg font-semibold hover:scale-105 transition">
-            Place Order
+          <button 
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[#00000070] border-x-2 text-white py-3 rounded-lg font-semibold hover:scale-105 transition">
+          {loading ? "Sending Your Order..." : "Place Order"}
           </button>
         </form>
+
         <div className="text-center mt-6">
         <button
           onClick={() => navigate("/menu")}

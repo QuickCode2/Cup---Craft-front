@@ -38,7 +38,7 @@ const handleSubmit = async (e) => {
   const toastId = toast.loading("Sending message... ⏳");
 
   try {
-    const response = await fetch("http://localhost:5000/api/contact", {
+    const response = await fetch("https://cup-craft-1back.vercel.app/api/contact", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,8 +1,9 @@
-/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable no-undef */
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import AdminAuth from "./AdminAuth";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
+
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -14,27 +15,26 @@ const Admin = () => {
     }
   }, []);
 
-  const fetchOrders = async () => {
-    try {
-      const token = localStorage.getItem("adminToken");
+ const fetchOrders = async () => {
+  try {
+    const token = localStorage.getItem("adminToken");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      const res = await fetch("http://localhost:5000/api/orders", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const data = await res.json();
+    console.log("Orders Response:", data); // ✅ Debugging
 
-      const data = await res.json();
-
-      if (!Array.isArray(data)) return;
-
+    if (Array.isArray(data)) {
       setOrders(data);
-    } catch (error) {
-      console.error(error);
     }
-  };
-
+  } catch (error) {
+    console.error("Fetch Orders Error:", error);
+  }
+};
   useEffect(() => {
     if (isAuthenticated) fetchOrders();
   }, [isAuthenticated]);
@@ -43,18 +43,30 @@ const Admin = () => {
     try {
       const token = localStorage.getItem("adminToken");
 
-      await fetch(`http://localhost:5000/api/orders/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
 
-      fetchOrders();
+      const updated = await res.json();
+
+      if (updated && updated._id) {
+        setOrders((prev) =>
+          prev.map((o) => (o._id === updated._id ? updated : o))
+        );
+      } else {
+        
+        fetchOrders();
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Update Status Error:", error);
     }
   };
 
@@ -69,12 +81,11 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-[#1a120b] via-[#3d2517] to-black text-white">
-      
-      {/*  HEADER */}
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-4xl md:text-5xl font-cursive2 tracking-wide bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text drop-shadow-xl">
-          <MdOutlineDashboardCustomize className="inline mr-3 text-5xl text-white"/>
-           Coffee Dashboard
+          <MdOutlineDashboardCustomize className="inline mr-3 text-5xl text-white" />
+          Coffee Dashboard
         </h1>
 
         <button
@@ -85,17 +96,13 @@ const Admin = () => {
         </button>
       </div>
 
-      {/*CARDS GRID */}
+      {/* CARDS GRID */}
       <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 perspective-1000">
-        
         {orders && orders.length > 0 ? (
           orders.map((order) => (
             <motion.div
               key={order._id}
-              className={`relative p-6 rounded-2xl shadow-2xl backdrop-blur-lg border border-white/20 
-              bg-white/10 hover:bg-white/20 transition-all duration-300`}
-              
-              // 3D EFFECT
+              className="relative p-6 rounded-2xl shadow-2xl backdrop-blur-lg border border-white/20 bg-white/10 hover:bg-white/20 transition-all duration-300"
               whileHover={{
                 rotateY: 10,
                 rotateX: 5,
@@ -103,18 +110,17 @@ const Admin = () => {
               }}
               transition={{ type: "spring", stiffness: 150 }}
             >
-              {/* Glow effect */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-yellow-400/20 to-orange-500/20 blur-xl opacity-0 hover:opacity-100 transition duration-500"></div>
 
               <div className="relative z-10">
-              <p className="text-lg font-semibold text-yellow-300">
-                👤 {order.customerName}
-              </p>
-              <p className="mt-2">☕ {order.coffeeName}</p>
-              <p className="mt-1 text-yellow-200">Type: {order.coffeeType}</p>
-              <p className="mt-1 text-orange-300">Qty: {order.qty}</p>
-              <p className="mt-1 text-gray-300">📍 {order.address}</p>
-              <p className="mt-2">💰 ₹{order.total}</p>
+                <p className="text-lg font-semibold text-yellow-300">
+                  👤 {order.customerName}
+                </p>
+                <p className="mt-2">☕ {order.coffeeName}</p>
+                <p className="mt-1 text-yellow-200">Type: {order.coffeeType}</p>
+                <p className="mt-1 text-orange-300">Qty: {order.qty}</p>
+                <p className="mt-1 text-gray-300">📍 {order.address}</p>
+                <p className="mt-2">💰 ₹{order.total}</p>
                 <p
                   className={`mt-2 font-bold ${
                     order.status === "delivered"
