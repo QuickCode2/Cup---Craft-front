@@ -8,6 +8,19 @@ import toast from "react-hot-toast";
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [view, setView] = useState("pending"); // pending by default
+
+  // Clear all delivered
+  const clearDeliveredOrders = () => {
+    setOrders((prev) => prev.filter((order) => order.status !== "delivered"));
+    toast.success("All delivered orders cleared");
+  };
+
+  // Remove single order
+  const removeOrder = (id) => {
+    setOrders((prev) => prev.filter((order) => order._id !== id));
+    toast.success("Order removed");
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -27,7 +40,6 @@ const Admin = () => {
       });
 
       const data = await res.json();
-      console.log("Orders Response:", data);
 
       if (Array.isArray(data)) {
         setOrders(data);
@@ -44,18 +56,29 @@ const Admin = () => {
     if (isAuthenticated) fetchOrders();
   }, [isAuthenticated]);
 
+  
   const updateStatus = async (id, status) => {
-    try {
-      const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("adminToken");
 
-      const res = await fetch(`https://cup-craft-1back.vercel.app/api/orders/${id}`, {  
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
+  
+    setOrders((prev) =>
+      prev.map((o) =>
+        o._id === id ? { ...o, status: "delivered" } : o
+      )
+    );
+
+    try {
+      const res = await fetch(
+        `https://cup-craft-1back.vercel.app/api/orders/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
 
       const updated = await res.json();
 
@@ -63,11 +86,17 @@ const Admin = () => {
         setOrders((prev) =>
           prev.map((o) => (o._id === updated._id ? updated : o))
         );
-      } else {
-        fetchOrders();
       }
     } catch (error) {
       console.error("Update Status Error:", error);
+
+      // rollback
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === id ? { ...o, status: "pending" } : o
+        )
+      );
+
       toast.error("Failed to update order status");
     }
   };
@@ -77,74 +106,117 @@ const Admin = () => {
     setIsAuthenticated(false);
   };
 
+  
+  const filteredOrders = orders.filter((order) =>
+    view === "pending"
+      ? order.status !== "delivered"
+      : order.status === "delivered"
+  );
+
   if (!isAuthenticated) {
     return <AdminAuth onAuth={setIsAuthenticated} />;
   }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-[#1a120b] via-[#3d2517] to-black text-white">
+
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <h1 className="text-4xl md:text-5xl font-cursive2 tracking-wide 
-          bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text drop-shadow-xl">
+        bg-gradient-to-r from-yellow-400 to-orange-500 text-transparent bg-clip-text drop-shadow-xl">
           <MdOutlineDashboardCustomize className="inline mr-3 text-5xl text-white" />
           Coffee Dashboard
         </h1>
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-500/80 backdrop-blur-md px-5 py-2 rounded-xl shadow-lg hover:bg-red-600 transition duration-300"
-        >
-          Logout
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {/* Toggle Buttons */}
+          <button
+            onClick={() => setView("pending")}
+            className={`px-4 py-2 rounded-xl ${
+              view === "pending"
+                ? "bg-yellow-500"
+                : "bg-gray-600"
+            }`}
+          >
+            Pending Orders
+          </button>
+
+          <button
+            onClick={() => setView("delivered")}
+            className={`px-4 py-2 rounded-xl ${
+              view === "delivered"
+                ? "bg-green-500"
+                : "bg-gray-600"
+            }`}
+          >
+            Delivered Orders
+          </button>
+
+          <button
+            onClick={clearDeliveredOrders}
+            className="bg-green-500/80 px-5 py-2 rounded-xl"
+          >
+            Clear Delivered
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="bg-red-500/80 px-5 py-2 rounded-xl"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* CARDS */}
-      <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 perspective-1000">
-        {orders && orders.length > 0 ? (
-          orders.map((order) => (
+      <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredOrders.length > 0 ? (
+          filteredOrders.map((order) => (
             <motion.div
               key={order._id}
-              className="relative p-6 rounded-2xl shadow-2xl backdrop-blur-lg 
-              border border-white/20 bg-white/10 hover:bg-white/20 transition-all duration-300"
-              whileHover={{
-                rotateY: 10,
-                rotateX: 5,
-                scale: 1.05,
-              }}
-              transition={{ type: "spring", stiffness: 150 }}
+              className="p-6 rounded-2xl shadow-2xl backdrop-blur-lg border border-white/20 bg-white/10"
+              whileHover={{ scale: 1.05 }}
             >
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-yellow-400/20 to-orange-500/20
-                blur-xl opacity-0 hover:opacity-100 transition duration-500"></div>
+              <p className="text-lg font-semibold text-yellow-300">
+                👤 {order.customerName}
+              </p>
+              <p className="mt-2">☕ {order.coffeeName}</p>
+              <p className="mt-1 text-yellow-200">Type: {order.coffeeType}</p>
+              <p className="mt-1 text-orange-300">Qty: {order.qty}</p>
+              <p className="mt-1 text-gray-300">📍 {order.address}</p>
+              <p className="mt-2">💰 ₹{order.total}</p>
 
-              <div className="relative z-10">
-                <p className="text-lg font-semibold text-yellow-300">
-                  👤 {order.customerName}
-                </p>
-                <p className="mt-2">☕ {order.coffeeName}</p>
-                <p className="mt-1 text-yellow-200">Type: {order.coffeeType}</p>
-                <p className="mt-1 text-orange-300">Qty: {order.qty}</p>
-                <p className="mt-1 text-gray-300">📍 {order.address}</p>
-                <p className="mt-2">💰 ₹{order.total}</p>
-                <p
-                  className={`mt-2 font-bold ${
-                    order.status === "delivered"
-                      ? "text-green-400"
-                      : "text-yellow-400"
-                  }`}
-                >
-                  Status: {order.status}
-                </p>
+              <p
+                className={`mt-2 font-bold ${
+                  order.status === "delivered"
+                    ? "text-green-400"
+                    : "text-yellow-400"
+                }`}
+              >
+                Status: {order.status}
+              </p>
 
+              {/* Show only in pending view */}
+              {view === "pending" && (
                 <motion.button
                   onClick={() => updateStatus(order._id, "delivered")}
-                  className="mt-4 w-full bg-gradient-to-b from-green-400 to-green-800 
-                  py-2 rounded-xl shadow-lg hover:scale-105 transition"
+                  className="mt-4 w-full py-2 rounded-xl shadow-lg bg-gradient-to-b from-green-400 to-green-800"
                   whileTap={{ scale: 0.9 }}
                 >
-                  Mark Delivered
+                  Mark Delivered 
                 </motion.button>
-              </div>
+              )}
+
+              {/* Show only in delivered view */}
+              {view === "delivered" && (
+                <motion.button
+                  onClick={() => removeOrder(order._id)}
+                  className="mt-4 w-full bg-red-500 py-2 rounded-xl shadow-lg hover:bg-red-600"
+                  whileTap={{ scale: 0.9 }}
+                >
+                  Remove
+                </motion.button>
+              )}
             </motion.div>
           ))
         ) : (
