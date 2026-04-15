@@ -4,45 +4,51 @@ import { motion } from "framer-motion";
 import { RiAdminFill } from "react-icons/ri";
 import toast, { Toaster } from "react-hot-toast";
 
-const ADMIN_USERNAME = "nitesh";
-const ADMIN_PASSWORD = "nitesh123";
-
 const AdminAuth = ({ onAuth }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!username || !password) {
-      toast.error("Please fill all fields");
-      return;
+  if (!username || !password) {
+    toast.error("Please fill all fields");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("https://cup-craft-1back.vercel.app/api/admin/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      
+      localStorage.setItem("adminToken", data.token);
+
+      toast.success("Login Successful!");
+
+      setTimeout(() => {
+        onAuth(true);
+      }, 800);
+    } else {
+      toast.error(data.message || "Login failed");
     }
+  } catch (error) {
+    toast.error("Server error");
+  }
 
-    setLoading(true);
+  setLoading(false);
+};
 
-    setTimeout(() => {
-      // 
-      if (
-        username === ADMIN_USERNAME &&
-        password === ADMIN_PASSWORD
-      ) {
-        // 
-        localStorage.setItem("adminToken", "secure-admin-token");
-
-        toast.success("Login Successful!");
-
-        setTimeout(() => {
-          onAuth(true);
-        }, 800);
-      } else {
-        toast.error("Invalid username or password");
-      }
-
-      setLoading(false);
-    }, 800); 
-  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#1a120b] via-[#3d2517] to-black text-white">
