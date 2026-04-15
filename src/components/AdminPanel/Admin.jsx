@@ -32,7 +32,7 @@ const Admin = () => {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("https://cup-craft-1back.vercel.app/admin/api/orders", {   
+      const res = await fetch("https://cup-craft-1back.vercel.app/api/orders", {   
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -69,7 +69,7 @@ const Admin = () => {
 
     try {
       const res = await fetch(
-        `https://cup-craft-1back.vercel.app/api/admin/api/orders/${id}`,
+        `https://cup-craft-1back.vercel.app/api/orders/${id}`,
         {
           method: "PUT",
           headers: {
