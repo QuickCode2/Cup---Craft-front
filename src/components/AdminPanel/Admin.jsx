@@ -30,14 +30,29 @@ const Admin = () => {
   }, []);
 
   const fetchOrders = async () => {
+    const token = localStorage.getItem("adminToken");
+    
+    // 1. Prevent request if token is missing
+    if (!token) {
+      setIsAuthenticated(false);
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("adminToken");
       const res = await fetch("https://cup-craft-1back.vercel.app/api/orders", {   
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
+
+      // 2. Handle unauthorized response (e.g., expired token)
+      if (res.status === 401) {
+        localStorage.removeItem("adminToken");
+        setIsAuthenticated(false);
+        toast.error("Session expired. Please login again.");
+        return;
+      }
 
       const data = await res.json();
 
