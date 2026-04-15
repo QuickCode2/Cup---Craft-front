@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import AdminAuth from "./AdminAuth";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
-import toast from "react-hot-toast";
+import toast from "react-hot-toast";  
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [view, setView] = useState("pending"); // pending by default
 
   // Clear all delivered
@@ -21,12 +22,20 @@ const Admin = () => {
     toast.success("Order removed");
   };
 
-  // ✅ Fetch orders without token
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   const fetchOrders = async () => {
     try {
-      const res = await fetch("https://cup-craft-1back.vercel.app/api/orders", {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch("https://cup-craft-1back.vercel.app/api/orders", {   
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -44,13 +53,18 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (isAuthenticated) fetchOrders();
+  }, [isAuthenticated]);
 
-  // ✅ Update status without token
+  
   const updateStatus = async (id, status) => {
+    const token = localStorage.getItem("adminToken");
+
+  
     setOrders((prev) =>
-      prev.map((o) => (o._id === id ? { ...o, status: "delivered" } : o))
+      prev.map((o) =>
+        o._id === id ? { ...o, status: "delivered" } : o
+      )
     );
 
     try {
@@ -60,6 +74,7 @@ const Admin = () => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ status }),
         }
@@ -77,19 +92,34 @@ const Admin = () => {
 
       // rollback
       setOrders((prev) =>
-        prev.map((o) => (o._id === id ? { ...o, status: "pending" } : o))
+        prev.map((o) =>
+          o._id === id ? { ...o, status: "pending" } : o
+        )
       );
 
       toast.error("Failed to update order status");
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+    setIsAuthenticated(false);
+  };
+
+  
   const filteredOrders = orders.filter((order) =>
-    view === "pending" ? order.status !== "delivered" : order.status === "delivered"
+    view === "pending"
+      ? order.status !== "delivered"
+      : order.status === "delivered"
   );
+
+  if (!isAuthenticated) {
+    return <AdminAuth onAuth={setIsAuthenticated} />;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-[#1a120b] via-[#3d2517] to-black text-white">
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
         <h1 className="text-4xl md:text-5xl font-cursive2 tracking-wide 
@@ -99,10 +129,13 @@ const Admin = () => {
         </h1>
 
         <div className="flex flex-wrap gap-3">
+          {/* Toggle Buttons */}
           <button
             onClick={() => setView("pending")}
             className={`px-4 py-2 rounded-xl ${
-              view === "pending" ? "bg-yellow-500" : "bg-gray-600"
+              view === "pending"
+                ? "bg-yellow-500"
+                : "bg-gray-600"
             }`}
           >
             Pending Orders
@@ -111,7 +144,9 @@ const Admin = () => {
           <button
             onClick={() => setView("delivered")}
             className={`px-4 py-2 rounded-xl ${
-              view === "delivered" ? "bg-green-500" : "bg-gray-600"
+              view === "delivered"
+                ? "bg-green-500"
+                : "bg-gray-600"
             }`}
           >
             Delivered Orders
@@ -122,6 +157,13 @@ const Admin = () => {
             className="bg-green-500/80 px-5 py-2 rounded-xl"
           >
             Clear Delivered
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="bg-red-500/80 px-5 py-2 rounded-xl"
+          >
+            Logout
           </button>
         </div>
       </div>
@@ -146,22 +188,26 @@ const Admin = () => {
 
               <p
                 className={`mt-2 font-bold ${
-                  order.status === "delivered" ? "text-green-400" : "text-yellow-400"
+                  order.status === "delivered"
+                    ? "text-green-400"
+                    : "text-yellow-400"
                 }`}
               >
                 Status: {order.status}
               </p>
 
+              {/* Show only in pending view */}
               {view === "pending" && (
                 <motion.button
                   onClick={() => updateStatus(order._id, "delivered")}
                   className="mt-4 w-full py-2 rounded-xl shadow-lg bg-gradient-to-b from-green-400 to-green-800"
                   whileTap={{ scale: 0.9 }}
                 >
-                  Mark Delivered
+                  Mark Delivered 
                 </motion.button>
               )}
 
+              {/* Show only in delivered view */}
               {view === "delivered" && (
                 <motion.button
                   onClick={() => removeOrder(order._id)}
